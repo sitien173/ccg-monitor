@@ -10,6 +10,9 @@ importers:
 
   packages/cli:
     dependencies:
+      '@ccgmon/daemon':
+        specifier: workspace:*
+        version: link:../daemon
       '@ccgmon/shared':
         specifier: workspace:*
         version: link:../shared
