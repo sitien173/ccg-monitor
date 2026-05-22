@@ -1,6 +1,9 @@
 import { Hono } from "hono";
 import { serve, type ServerType } from "@hono/node-server";
 
+import { registerEventRoutes } from "./api/events.js";
+import { registerStreamRoutes } from "./api/stream.js";
+import { SseBus } from "./bus.js";
 import { loadConfig } from "./config.js";
 import { CcgmonDatabase } from "./db.js";
 
@@ -11,6 +14,8 @@ export type StartDaemonOptions = {
 };
 
 export type DaemonRuntime = {
+  db: CcgmonDatabase;
+  getSubscriberCount: () => number;
   port: number;
   close: () => Promise<void>;
 };
@@ -18,17 +23,14 @@ export type DaemonRuntime = {
 export async function startDaemon(options: StartDaemonOptions = {}): Promise<DaemonRuntime> {
   const config = await loadConfig(options.homeDir);
   const db = new CcgmonDatabase(config.dbPath);
+  const bus = new SseBus();
+  const startedAtMs = Date.now();
 
-  const app = new Hono();
-  app.get("/healthz", (context) =>
-    context.json({
-      ok: true,
-      version: "0.1.0",
-      uptime_s: 0,
-      event_count: db.countEvents(),
-      db_size_bytes: db.getHealthSnapshot().dbSizeBytes,
-    }),
-  );
+  const app = createApp({
+    bus,
+    db,
+    startedAtMs,
+  });
 
   const requestedPort = options.port ?? config.defaultPort;
   const server = await listen(app, requestedPort);
@@ -42,6 +44,8 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
   options.log?.(`ccgmon daemon listening on 127.0.0.1:${selectedPort}`);
 
   return {
+    db,
+    getSubscriberCount: () => bus.subscriberCount(),
     port: selectedPort,
     close: async () => {
       await new Promise<void>((resolve, reject) => {
@@ -56,6 +60,34 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
       db.close();
     },
   };
+}
+
+export function createApp(dependencies: {
+  bus: SseBus;
+  db: CcgmonDatabase;
+  startedAtMs: number;
+}): Hono {
+  const app = new Hono();
+
+  registerEventRoutes(app, {
+    bus: dependencies.bus,
+    db: dependencies.db,
+  });
+  registerStreamRoutes(app, {
+    bus: dependencies.bus,
+  });
+
+  app.get("/healthz", (context) =>
+    context.json({
+      ok: true,
+      version: "0.1.0",
+      uptime_s: Math.floor((Date.now() - dependencies.startedAtMs) / 1000),
+      event_count: dependencies.db.countEvents(),
+      db_size_bytes: dependencies.db.getHealthSnapshot().dbSizeBytes,
+    }),
+  );
+
+  return app;
 }
 
 async function listen(app: Hono, port: number): Promise<ServerType> {
