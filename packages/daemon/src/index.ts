@@ -2,10 +2,15 @@ import { Hono } from "hono";
 import { serve, type ServerType } from "@hono/node-server";
 
 import { registerEventRoutes } from "./api/events.js";
+import { registerHealthzRoutes } from "./api/healthz.js";
+import { registerPlansRoutes } from "./api/plans.js";
+import { registerProjectsRoutes } from "./api/projects.js";
 import { registerStreamRoutes } from "./api/stream.js";
 import { SseBus } from "./bus.js";
 import { loadConfig } from "./config.js";
 import { CcgmonDatabase } from "./db.js";
+
+const DAEMON_VERSION = "0.1.0";
 
 export type StartDaemonOptions = {
   port?: number;
@@ -76,15 +81,25 @@ export function createApp(dependencies: {
   registerStreamRoutes(app, {
     bus: dependencies.bus,
   });
+  registerProjectsRoutes(app, {
+    db: dependencies.db,
+  });
+  registerPlansRoutes(app, {
+    db: dependencies.db,
+  });
+  registerHealthzRoutes(app, {
+    db: dependencies.db,
+    startedAtMs: dependencies.startedAtMs,
+    version: DAEMON_VERSION,
+  });
 
-  app.get("/healthz", (context) =>
-    context.json({
-      ok: true,
-      version: "0.1.0",
-      uptime_s: Math.floor((Date.now() - dependencies.startedAtMs) / 1000),
-      event_count: dependencies.db.countEvents(),
-      db_size_bytes: dependencies.db.getHealthSnapshot().dbSizeBytes,
-    }),
+  app.notFound((context) =>
+    context.json(
+      {
+        error: "not_found",
+      },
+      404,
+    ),
   );
 
   return app;
