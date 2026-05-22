@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import Database from "better-sqlite3";
@@ -246,7 +246,7 @@ export class CcgmonDatabase {
       return;
     }
 
-    const schemaPath = fileURLToPath(new URL("./schema.sql", import.meta.url));
+    const schemaPath = resolveSchemaPath();
     const schemaSql = readFileSync(schemaPath, "utf8");
     const applyMigration = this.db.transaction(() => {
       this.db.exec(schemaSql);
@@ -254,4 +254,12 @@ export class CcgmonDatabase {
     });
     applyMigration();
   }
+}
+
+function resolveSchemaPath(): string {
+  const distPath = fileURLToPath(new URL("./schema.sql", import.meta.url));
+  if (existsSync(distPath)) {
+    return distPath;
+  }
+  return fileURLToPath(new URL("../src/schema.sql", import.meta.url));
 }

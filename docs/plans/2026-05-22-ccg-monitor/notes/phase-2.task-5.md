@@ -13,6 +13,7 @@
   - SSE reconnect cycle does not leak listeners
   - WAL mode and db/wal/shm file creation
   - `daemon.port` file write + cleanup on shutdown
+- Updated DB migration loader to resolve `schema.sql` from either `dist/` or fallback `src/` so compiled CLI daemon startup works without a copy step.
 
 ## Spec deviations
 - none
