@@ -11,7 +11,9 @@ import {
 } from "@ccgmon/shared/constants";
 import { Hono } from "hono";
 
+import { registerBackfillRoutes } from "./api/backfill.js";
 import { registerEventRoutes } from "./api/events.js";
+import { registerExportRoutes } from "./api/export.js";
 import { registerHealthzRoutes } from "./api/healthz.js";
 import { registerPlansRoutes } from "./api/plans.js";
 import { registerProjectsRoutes } from "./api/projects.js";
@@ -26,6 +28,9 @@ import { PlanWatcher, type WatchedFileChange } from "./watcher.js";
 
 const DAEMON_VERSION = "0.1.0";
 const DAEMON_HOST = "127.0.0.1";
+
+export { loadConfig } from "./config.js";
+export { CcgmonDatabase } from "./db.js";
 
 export type StartDaemonOptions = {
   port?: number;
@@ -187,6 +192,13 @@ export function createApp(dependencies: {
     bus: dependencies.bus,
   });
   registerProjectsRoutes(app, {
+    db: dependencies.db,
+  });
+  registerBackfillRoutes(app, {
+    db: dependencies.db,
+    projector: dependencies.projector,
+  });
+  registerExportRoutes(app, {
     db: dependencies.db,
   });
   registerPlansRoutes(app, {

@@ -77,6 +77,17 @@ type InsertResult = {
   changes: number;
 };
 
+export type ProjectionExport = {
+  events: StoredEventRow[];
+  projects: ProjectRow[];
+  plans: PlanRow[];
+  phases: PhaseRow[];
+  tasks: TaskRow[];
+  routes: Array<Record<string, unknown>>;
+  reviews: Array<Record<string, unknown>>;
+  sessions_cache: Array<Record<string, unknown>>;
+};
+
 /**
  * P2 keeps a single synchronous writer via one better-sqlite3 connection.
  * P3 projector relies on this single-writer pattern for deterministic ordering.
@@ -876,6 +887,99 @@ export class CcgmonDatabase {
       )
       .get(projectId, slug, status) as { count: number };
     return row.count;
+  }
+
+  public pruneEventsOlderThan(cutoffDate: string): number {
+    const result = this.db
+      .prepare(
+        `
+        DELETE FROM events
+        WHERE ts < ?
+          AND row_id NOT IN (
+            SELECT MAX(e.row_id)
+            FROM events e
+            INNER JOIN plans p
+              ON p.project_id = e.project_id
+             AND p.slug = e.plan_slug
+            WHERE p.status = 'ACTIVE'
+            GROUP BY e.project_id, e.plan_slug
+          );
+        `,
+      )
+      .run(cutoffDate) as InsertResult;
+
+    return result.changes;
+  }
+
+  public exportProjectionTables(): ProjectionExport {
+    return {
+      events: this.db
+        .prepare(
+          `
+          SELECT
+            row_id,
+            event_id,
+            event_type,
+            event_version,
+            ts,
+            source,
+            machine_id,
+            project_id,
+            repo_root,
+            session_id,
+            plan_slug,
+            payload_json
+          FROM events
+          ORDER BY row_id ASC;
+          `,
+        )
+        .all() as StoredEventRow[],
+      projects: this.db
+        .prepare(
+          `
+          SELECT project_id, repo_root, remote_url, status, first_seen, last_seen
+          FROM projects
+          ORDER BY project_id ASC;
+          `,
+        )
+        .all() as ProjectRow[],
+      plans: this.db
+        .prepare(
+          `
+          SELECT project_id, slug, title, status, current_phase, handover_status, updated_at
+          FROM plans
+          ORDER BY project_id ASC, slug ASC;
+          `,
+        )
+        .all() as PlanRow[],
+      phases: this.db
+        .prepare(
+          `
+          SELECT project_id, slug, phase_id, title, owner, gate_state, started_at, completed_at
+          FROM phases
+          ORDER BY project_id ASC, slug ASC, phase_id ASC;
+          `,
+        )
+        .all() as PhaseRow[],
+      tasks: this.db
+        .prepare(
+          `
+          SELECT project_id, slug, phase_id, task_id, title, status, files_json
+          FROM tasks
+          ORDER BY project_id ASC, slug ASC, phase_id ASC, task_id ASC;
+          `,
+        )
+        .all() as TaskRow[],
+      routes: this.db.prepare("SELECT * FROM routes ORDER BY started_at ASC;").all() as Array<
+        Record<string, unknown>
+      >,
+      reviews: this.db.prepare("SELECT * FROM reviews ORDER BY ts ASC;").all() as Array<
+        Record<string, unknown>
+      >,
+      sessions_cache: this.db
+        .prepare("SELECT * FROM sessions_cache ORDER BY project_id ASC, slug ASC, backend ASC;")
+        .all() as Array<Record<string, unknown>>,
+    };
   }
 
   private runMigrations(): void {
