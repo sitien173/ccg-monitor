@@ -83,19 +83,21 @@ function parseTasks(lines: string[]): PhaseTask[] {
 }
 
 function parseFilesModified(raw: string): string[] {
-  const sectionMatch = raw.match(
-    /^##\s+Files\s+Modified\s*\r?\n([\s\S]*?)(?=^##\s+|$)/im,
-  );
-  if (!sectionMatch) {
+  const lines = raw.split(/\r?\n/);
+  const startIndex = lines.findIndex((line) => /^##\s+Files\s+Modified\s*$/i.test(line.trim()));
+  if (startIndex === -1) {
     return [];
   }
 
   const output: string[] = [];
-  const sectionBody = sectionMatch[1];
-  if (sectionBody === undefined) {
-    return [];
-  }
-  for (const line of sectionBody.split(/\r?\n/)) {
+  for (let index = startIndex + 1; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (line === undefined) {
+      break;
+    }
+    if (/^##\s+/.test(line.trim())) {
+      break;
+    }
     const bullet = line.trim().match(/^[-*]\s+(.*)$/);
     if (!bullet) {
       continue;

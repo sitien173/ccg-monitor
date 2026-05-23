@@ -767,6 +767,26 @@ export class CcgmonDatabase {
     return rows.map((row) => row.phase_id);
   }
 
+  public countTableRows(tableName: "projects" | "plans" | "phases" | "tasks" | "sessions_cache"): number {
+    const row = this.db
+      .prepare(`SELECT COUNT(*) AS count FROM ${tableName};`)
+      .get() as { count: number };
+    return row.count;
+  }
+
+  public countTasksByStatus(projectId: string, slug: string, status: string): number {
+    const row = this.db
+      .prepare(
+        `
+        SELECT COUNT(*) AS count
+        FROM tasks
+        WHERE project_id = ? AND slug = ? AND status = ?;
+        `,
+      )
+      .get(projectId, slug, status) as { count: number };
+    return row.count;
+  }
+
   private runMigrations(): void {
     const versionRow = this.db
       .prepare("PRAGMA user_version;")

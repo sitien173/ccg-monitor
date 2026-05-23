@@ -117,19 +117,26 @@ function parseListSection(markdown: string, sectionName: string): string[] {
 }
 
 function getSectionBody(markdown: string, sectionName: string): string | null {
-  const expression = new RegExp(
-    `^##\\s+${escapeRegex(sectionName)}\\s*\\r?\\n([\\s\\S]*?)(?=^##\\s+|$)`,
-    "im",
-  );
-  const match = markdown.match(expression);
-  if (!match) {
+  const lines = markdown.split(/\r?\n/);
+  const headingExpression = new RegExp(`^##\\s+${escapeRegex(sectionName)}\\s*$`, "i");
+  const startIndex = lines.findIndex((line) => headingExpression.test(line.trim()));
+  if (startIndex === -1) {
     return null;
   }
-  const body = match[1];
-  if (body === undefined) {
-    return null;
+
+  const collected: string[] = [];
+  for (let index = startIndex + 1; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (line === undefined) {
+      break;
+    }
+    if (/^##\s+/.test(line.trim())) {
+      break;
+    }
+    collected.push(line);
   }
-  return body.trim();
+
+  return collected.join("\n").trim();
 }
 
 function stripQuotes(value: string): string {
