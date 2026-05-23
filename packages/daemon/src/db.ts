@@ -22,7 +22,11 @@ type EventRow = {
   payload_json: string;
 };
 
-type PlanRow = {
+export type StoredEventRow = EventRow & {
+  row_id: number;
+};
+
+export type PlanRow = {
   project_id: string;
   slug: string;
   title: string | null;
@@ -32,7 +36,7 @@ type PlanRow = {
   updated_at: string;
 };
 
-type PhaseRow = {
+export type PhaseRow = {
   project_id: string;
   slug: string;
   phase_id: string;
@@ -43,7 +47,7 @@ type PhaseRow = {
   completed_at: string | null;
 };
 
-type TaskRow = {
+export type TaskRow = {
   project_id: string;
   slug: string;
   phase_id: string;
@@ -326,6 +330,413 @@ export class CcgmonDatabase {
         `,
       )
       .all() as Array<{ event_id: string; event_type: string }>;
+  }
+
+  public listEventsAfterRowId(afterRowId: number, limit = 100): StoredEventRow[] {
+    return this.db
+      .prepare(
+        `
+        SELECT
+          row_id,
+          event_id,
+          event_type,
+          event_version,
+          ts,
+          source,
+          machine_id,
+          project_id,
+          repo_root,
+          session_id,
+          plan_slug,
+          payload_json
+        FROM events
+        WHERE row_id > ?
+        ORDER BY row_id ASC
+        LIMIT ?;
+        `,
+      )
+      .all(afterRowId, limit) as StoredEventRow[];
+  }
+
+  public upsertPlanProjection(input: {
+    projectId: string;
+    slug: string;
+    title: string | null;
+    status: string;
+    currentPhase: string | null;
+    handoverStatus: string | null;
+    updatedAt: string;
+  }): boolean {
+    const existing = this.db
+      .prepare(
+        `
+        SELECT title, status, current_phase, handover_status, updated_at
+        FROM plans
+        WHERE project_id = ? AND slug = ?;
+        `,
+      )
+      .get(input.projectId, input.slug) as
+      | {
+          title: string | null;
+          status: string;
+          current_phase: string | null;
+          handover_status: string | null;
+          updated_at: string;
+        }
+      | undefined;
+
+    if (!existing) {
+      this.db
+        .prepare(
+          `
+          INSERT INTO plans (project_id, slug, title, status, current_phase, handover_status, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?);
+          `,
+        )
+        .run(
+          input.projectId,
+          input.slug,
+          input.title,
+          input.status,
+          input.currentPhase,
+          input.handoverStatus,
+          input.updatedAt,
+        );
+      return true;
+    }
+
+    const changedColumns: string[] = [];
+    const params: Array<string | null> = [];
+
+    if (existing.title !== input.title) {
+      changedColumns.push("title = ?");
+      params.push(input.title);
+    }
+    if (existing.status !== input.status) {
+      changedColumns.push("status = ?");
+      params.push(input.status);
+    }
+    if (existing.current_phase !== input.currentPhase) {
+      changedColumns.push("current_phase = ?");
+      params.push(input.currentPhase);
+    }
+    if (existing.handover_status !== input.handoverStatus) {
+      changedColumns.push("handover_status = ?");
+      params.push(input.handoverStatus);
+    }
+    if (existing.updated_at !== input.updatedAt) {
+      changedColumns.push("updated_at = ?");
+      params.push(input.updatedAt);
+    }
+
+    if (changedColumns.length === 0) {
+      return false;
+    }
+
+    params.push(input.projectId, input.slug);
+    this.db
+      .prepare(
+        `
+        UPDATE plans
+        SET ${changedColumns.join(", ")}
+        WHERE project_id = ? AND slug = ?;
+        `,
+      )
+      .run(...params);
+    return true;
+  }
+
+  public upsertPhaseProjection(input: {
+    projectId: string;
+    slug: string;
+    phaseId: string;
+    title: string | null;
+    owner: string | null;
+    gateState: string | null;
+    startedAt: string | null;
+    completedAt: string | null;
+  }): boolean {
+    const existing = this.db
+      .prepare(
+        `
+        SELECT title, owner, gate_state, started_at, completed_at
+        FROM phases
+        WHERE project_id = ? AND slug = ? AND phase_id = ?;
+        `,
+      )
+      .get(input.projectId, input.slug, input.phaseId) as
+      | {
+          title: string | null;
+          owner: string | null;
+          gate_state: string | null;
+          started_at: string | null;
+          completed_at: string | null;
+        }
+      | undefined;
+
+    if (!existing) {
+      this.db
+        .prepare(
+          `
+          INSERT INTO phases (
+            project_id,
+            slug,
+            phase_id,
+            title,
+            owner,
+            gate_state,
+            started_at,
+            completed_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+          `,
+        )
+        .run(
+          input.projectId,
+          input.slug,
+          input.phaseId,
+          input.title,
+          input.owner,
+          input.gateState,
+          input.startedAt,
+          input.completedAt,
+        );
+      return true;
+    }
+
+    const changedColumns: string[] = [];
+    const params: Array<string | null> = [];
+    if (existing.title !== input.title) {
+      changedColumns.push("title = ?");
+      params.push(input.title);
+    }
+    if (existing.owner !== input.owner) {
+      changedColumns.push("owner = ?");
+      params.push(input.owner);
+    }
+    if (existing.gate_state !== input.gateState) {
+      changedColumns.push("gate_state = ?");
+      params.push(input.gateState);
+    }
+    if (existing.started_at !== input.startedAt) {
+      changedColumns.push("started_at = ?");
+      params.push(input.startedAt);
+    }
+    if (existing.completed_at !== input.completedAt) {
+      changedColumns.push("completed_at = ?");
+      params.push(input.completedAt);
+    }
+
+    if (changedColumns.length === 0) {
+      return false;
+    }
+
+    params.push(input.projectId, input.slug, input.phaseId);
+    this.db
+      .prepare(
+        `
+        UPDATE phases
+        SET ${changedColumns.join(", ")}
+        WHERE project_id = ? AND slug = ? AND phase_id = ?;
+        `,
+      )
+      .run(...params);
+    return true;
+  }
+
+  public syncPhaseTasks(input: {
+    projectId: string;
+    slug: string;
+    phaseId: string;
+    tasks: Array<{
+      taskId: string;
+      title: string;
+      status: string;
+      filesJson: string;
+    }>;
+  }): boolean {
+    const tx = this.db.transaction(() => {
+      const existingRows = this.db
+        .prepare(
+          `
+          SELECT task_id, title, status, files_json
+          FROM tasks
+          WHERE project_id = ? AND slug = ? AND phase_id = ?;
+          `,
+        )
+        .all(input.projectId, input.slug, input.phaseId) as Array<{
+        task_id: string;
+        title: string;
+        status: string;
+        files_json: string;
+      }>;
+
+      const existingByTaskId = new Map(existingRows.map((row) => [row.task_id, row]));
+      const incomingTaskIds = new Set<string>();
+      let changed = false;
+
+      for (const task of input.tasks) {
+        incomingTaskIds.add(task.taskId);
+        const existing = existingByTaskId.get(task.taskId);
+        if (!existing) {
+          this.db
+            .prepare(
+              `
+              INSERT INTO tasks (project_id, slug, phase_id, task_id, title, status, files_json)
+              VALUES (?, ?, ?, ?, ?, ?, ?);
+              `,
+            )
+            .run(
+              input.projectId,
+              input.slug,
+              input.phaseId,
+              task.taskId,
+              task.title,
+              task.status,
+              task.filesJson,
+            );
+          changed = true;
+          continue;
+        }
+
+        const changedColumns: string[] = [];
+        const params: string[] = [];
+        if (existing.title !== task.title) {
+          changedColumns.push("title = ?");
+          params.push(task.title);
+        }
+        if (existing.status !== task.status) {
+          changedColumns.push("status = ?");
+          params.push(task.status);
+        }
+        if (existing.files_json !== task.filesJson) {
+          changedColumns.push("files_json = ?");
+          params.push(task.filesJson);
+        }
+
+        if (changedColumns.length > 0) {
+          params.push(input.projectId, input.slug, input.phaseId, task.taskId);
+          this.db
+            .prepare(
+              `
+              UPDATE tasks
+              SET ${changedColumns.join(", ")}
+              WHERE project_id = ? AND slug = ? AND phase_id = ? AND task_id = ?;
+              `,
+            )
+            .run(...params);
+          changed = true;
+        }
+      }
+
+      for (const existingRow of existingRows) {
+        if (incomingTaskIds.has(existingRow.task_id)) {
+          continue;
+        }
+        this.db
+          .prepare(
+            `
+            DELETE FROM tasks
+            WHERE project_id = ? AND slug = ? AND phase_id = ? AND task_id = ?;
+            `,
+          )
+          .run(input.projectId, input.slug, input.phaseId, existingRow.task_id);
+        changed = true;
+      }
+
+      return changed;
+    });
+
+    return tx();
+  }
+
+  public syncSessionsCache(input: {
+    projectId: string;
+    slug: string;
+    entries: Array<{ backend: string; sessionId: string; lastUsed: string }>;
+  }): boolean {
+    const tx = this.db.transaction(() => {
+      const existingRows = this.db
+        .prepare(
+          `
+          SELECT backend, mcp_session_id, last_used
+          FROM sessions_cache
+          WHERE project_id = ? AND slug = ?;
+          `,
+        )
+        .all(input.projectId, input.slug) as Array<{
+        backend: string;
+        mcp_session_id: string;
+        last_used: string;
+      }>;
+      const existingByBackend = new Map(existingRows.map((row) => [row.backend, row]));
+      const incomingBackends = new Set<string>();
+      let changed = false;
+
+      for (const entry of input.entries) {
+        incomingBackends.add(entry.backend);
+        const existing = existingByBackend.get(entry.backend);
+        if (!existing) {
+          this.db
+            .prepare(
+              `
+              INSERT INTO sessions_cache (project_id, slug, backend, mcp_session_id, last_used)
+              VALUES (?, ?, ?, ?, ?);
+              `,
+            )
+            .run(
+              input.projectId,
+              input.slug,
+              entry.backend,
+              entry.sessionId,
+              entry.lastUsed,
+            );
+          changed = true;
+          continue;
+        }
+
+        const changedColumns: string[] = [];
+        const params: string[] = [];
+        if (existing.mcp_session_id !== entry.sessionId) {
+          changedColumns.push("mcp_session_id = ?");
+          params.push(entry.sessionId);
+        }
+        if (existing.last_used !== entry.lastUsed) {
+          changedColumns.push("last_used = ?");
+          params.push(entry.lastUsed);
+        }
+
+        if (changedColumns.length > 0) {
+          params.push(input.projectId, input.slug, entry.backend);
+          this.db
+            .prepare(
+              `
+              UPDATE sessions_cache
+              SET ${changedColumns.join(", ")}
+              WHERE project_id = ? AND slug = ? AND backend = ?;
+              `,
+            )
+            .run(...params);
+          changed = true;
+        }
+      }
+
+      for (const existing of existingRows) {
+        if (incomingBackends.has(existing.backend)) {
+          continue;
+        }
+        this.db
+          .prepare(
+            `
+            DELETE FROM sessions_cache
+            WHERE project_id = ? AND slug = ? AND backend = ?;
+            `,
+          )
+          .run(input.projectId, input.slug, existing.backend);
+        changed = true;
+      }
+      return changed;
+    });
+    return tx();
   }
 
   private runMigrations(): void {

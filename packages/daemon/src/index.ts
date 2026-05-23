@@ -18,6 +18,7 @@ import { registerStreamRoutes } from "./api/stream.js";
 import { SseBus } from "./bus.js";
 import { loadConfig } from "./config.js";
 import { CcgmonDatabase } from "./db.js";
+import { EventProjector } from "./projector.js";
 
 const DAEMON_VERSION = "0.1.0";
 const DAEMON_HOST = "127.0.0.1";
@@ -40,11 +41,14 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
   const config = await loadConfig(options.homeDir);
   const db = new CcgmonDatabase(config.dbPath);
   const bus = new SseBus();
+  const projector = new EventProjector(db);
+  projector.startPolling();
   const startedAtMs = Date.now();
 
   const app = createApp({
     bus,
     db,
+    projector,
     startedAtMs,
   });
 
@@ -57,6 +61,7 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
     server = listenResult.server;
     selectedPort = listenResult.port;
   } catch (error) {
+    projector.stopPolling();
     db.close();
     throw error;
   }
@@ -124,6 +129,7 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
 export function createApp(dependencies: {
   bus: SseBus;
   db: CcgmonDatabase;
+  projector: EventProjector;
   startedAtMs: number;
 }): Hono {
   const app = new Hono();
@@ -131,6 +137,7 @@ export function createApp(dependencies: {
   registerEventRoutes(app, {
     bus: dependencies.bus,
     db: dependencies.db,
+    projector: dependencies.projector,
   });
   registerStreamRoutes(app, {
     bus: dependencies.bus,
