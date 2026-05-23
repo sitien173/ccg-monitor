@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 
 import { serve, type ServerType } from "@hono/node-server";
+import { serveStatic } from "@hono/node-server/serve-static";
 import {
   DAEMON_PORT_FALLBACK_END,
   DAEMON_PORT_FALLBACK_START,
@@ -176,6 +177,17 @@ export function createApp(dependencies: {
     startedAtMs: dependencies.startedAtMs,
     version: DAEMON_VERSION,
   });
+
+  const uiPath = resolve(fileURLToPath(import.meta.url), "../../../ui");
+  app.use("/*", serveStatic({
+    root: uiPath,
+    rewriteRequestPath: (path) => {
+      if (path === "/" || path === "") {
+        return "/index.html";
+      }
+      return path;
+    }
+  }));
 
   app.notFound((context) =>
     context.json(

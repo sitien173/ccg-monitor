@@ -53,4 +53,30 @@ export function registerEventRoutes(
 
     return context.json({ accepted: true }, 202);
   });
+
+  app.get("/api/events", (context) => {
+    const rawEvents = dependencies.db.getRecentEvents(100);
+    const parsedEvents = rawEvents.map((row) => {
+      let payload: unknown = {};
+      try {
+        payload = JSON.parse(row.payload_json);
+      } catch (err) {
+        // ignore
+      }
+      return {
+        event_id: row.event_id,
+        event_type: row.event_type,
+        event_version: row.event_version,
+        ts: row.ts,
+        source: row.source,
+        machine_id: row.machine_id,
+        project_id: row.project_id,
+        repo_root: row.repo_root,
+        session_id: row.session_id,
+        plan_slug: row.plan_slug,
+        payload,
+      };
+    });
+    return context.json(parsedEvents);
+  });
 }

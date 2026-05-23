@@ -358,6 +358,31 @@ export class CcgmonDatabase {
       .all(afterRowId, limit) as StoredEventRow[];
   }
 
+  public getRecentEvents(limit = 100): StoredEventRow[] {
+    return this.db
+      .prepare(
+        `
+        SELECT
+          row_id,
+          event_id,
+          event_type,
+          event_version,
+          ts,
+          source,
+          machine_id,
+          project_id,
+          repo_root,
+          session_id,
+          plan_slug,
+          payload_json
+        FROM events
+        ORDER BY row_id DESC
+        LIMIT ?;
+        `,
+      )
+      .all(limit) as StoredEventRow[];
+  }
+
   public upsertPlanProjection(input: {
     projectId: string;
     slug: string;
