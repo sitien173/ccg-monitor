@@ -1,18 +1,16 @@
 # phase-3.task-5
 
 ## Decisions made (not in spec)
-- Implemented `ReconcileWorker` with an internal mtime cache keyed by normalized absolute file path; first observation seeds baseline, subsequent mtime changes trigger synthetic re-emits.
-- Shared synthetic file-to-event mapping via `emitSyntheticEventForFile()` and reused it for both live watcher callbacks and reconciliation drift re-emits.
+- Kept reconcile cadence and drift detection behavior aligned with existing 5-minute sweep implementation.
 
 ## Spec deviations
 - none
 
 ## Tradeoffs accepted
-- Reconciliation file inventory is derived from projection tables (`plans` + `phases`) rather than scanning whole repo trees, prioritizing projector-known files exactly as requested.
+- Reconciliation drift checks use projector-known plan/phase file set derived from current projection rows.
 
 ## Assumptions
-- `projects.status='IGNORED'` means watcher should unwatch root immediately but retain existing projection rows.
-- Reconcile drift events should use `source='fs_watcher'` to stay within existing source enum values.
+- Existing watcher add/remove root hooks are sufficient for reconcile-driven ignore transitions.
 
 ## Follow-ups for human
 - none
