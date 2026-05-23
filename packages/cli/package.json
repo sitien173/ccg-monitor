@@ -1,7 +1,6 @@
 {
   "name": "@ccgmon/cli",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
   "bin": {
     "ccgmon": "dist/bin.js"
@@ -15,6 +14,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@ccgmon/claude-hooks": "workspace:*",
     "@ccgmon/daemon": "workspace:*",
     "@ccgmon/shared": "workspace:*"
   },
