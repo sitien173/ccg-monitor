@@ -2,6 +2,7 @@ import type { Hono } from "hono";
 
 import { EventSchema } from "@ccgmon/shared/events";
 
+import { backfillRepoPlans } from "../backfill.js";
 import type { SseBus } from "../bus.js";
 import type { CcgmonDatabase } from "../db.js";
 import type { EventProjector } from "../projector.js";
@@ -36,6 +37,14 @@ export function registerEventRoutes(
     const ensured = await dependencies.watcher?.ensureProjectForRepoRoot(parsed.data.repo_root);
     if (ensured?.ignored) {
       return context.json({ accepted: true, ignored: true }, 200);
+    }
+    if (ensured?.created) {
+      await backfillRepoPlans({
+        db: dependencies.db,
+        projector: dependencies.projector,
+        projectId: ensured.projectId,
+        repoRoot: ensured.repoRoot,
+      });
     }
 
     dependencies.db.insertEvent(parsed.data);
