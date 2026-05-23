@@ -300,6 +300,7 @@ export class CcgmonDatabase {
   public getHealthSnapshot(): {
     eventCount: number;
     dbSizeBytes: number;
+    dbWritable: boolean;
   } {
     const row = this.db.prepare("SELECT COUNT(*) AS count FROM events;").get() as {
       count: number;
@@ -317,7 +318,35 @@ export class CcgmonDatabase {
     return {
       eventCount: row.count,
       dbSizeBytes: sizeRow.size_bytes,
+      dbWritable: this.isWritable(),
     };
+  }
+
+  public isWritable(): boolean {
+    try {
+      this.db
+        .prepare(
+          `
+          CREATE TEMP TABLE IF NOT EXISTS ccgmon_writable_probe (
+            id INTEGER PRIMARY KEY,
+            ts TEXT NOT NULL
+          );
+          `,
+        )
+        .run();
+      this.db
+        .prepare(
+          `
+          INSERT INTO ccgmon_writable_probe (id, ts)
+          VALUES (1, ?)
+          ON CONFLICT(id) DO UPDATE SET ts = excluded.ts;
+          `,
+        )
+        .run(new Date().toISOString());
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   public getTailState(): OpenmcpTailStateRow | null {

@@ -18,6 +18,7 @@ export function registerHealthzRoutes(
       uptime_s: Math.floor((Date.now() - dependencies.startedAtMs) / 1000),
       event_count: snapshot.eventCount,
       db_size_bytes: snapshot.dbSizeBytes,
+      db_writable: snapshot.dbWritable,
     });
   });
 }
