@@ -9,7 +9,7 @@ import { mergeCcgmonHooks, removeCcgmonHooks } from "../lib/settings-merge.js";
 function hookDistPath(file: string): string {
   const require = createRequire(import.meta.url);
   const pkg = require.resolve("@ccgmon/claude-hooks/package.json");
-  return join(dirname(pkg), "dist", file);
+  return join(dirname(pkg), "dist", file).replace(/\\/g, "/");
 }
 
 export async function runInstallHooksCommand(args: string[]): Promise<void> {
