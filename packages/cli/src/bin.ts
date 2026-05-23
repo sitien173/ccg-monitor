@@ -2,8 +2,15 @@
 
 import { parseArgs } from "node:util";
 
+import { runDoctorCommand } from "./commands/doctor.js";
+import { runExportCommand } from "./commands/export.js";
 import { runInstallHooksCommand } from "./commands/install-hooks.js";
+import { runOpenCommand } from "./commands/open.js";
+import { runPruneCommand } from "./commands/prune.js";
+import { runScanCommand } from "./commands/scan.js";
 import { runStartCommand } from "./commands/start.js";
+import { runStatusCommand } from "./commands/status.js";
+import { runStopCommand } from "./commands/stop.js";
 import { printVersion } from "./commands/version.js";
 
 const HELP_TEXT = `Usage: ccgmon <command> [options]
@@ -14,7 +21,14 @@ Options:
 
 Commands:
   start          Run daemon in foreground
-  install-hooks  Install Claude Code hooks into ~/.claude/settings.json`;
+  install-hooks  Install Claude Code hooks into ~/.claude/settings.json
+  doctor         Run environment checks
+  scan           Request repository backfill from daemon
+  prune          Remove old events from database
+  export         Export projection tables to JSON
+  status         Print daemon health summary
+  open           Open dashboard in browser
+  stop           Stop detached daemon`;
 
 function printHelp(): void {
   process.stdout.write(`${HELP_TEXT}\n`);
@@ -28,6 +42,34 @@ async function main(): Promise<void> {
   }
   if (args[0] === "install-hooks") {
     await runInstallHooksCommand(args.slice(1));
+    return;
+  }
+  if (args[0] === "doctor") {
+    await runDoctorCommand(args.slice(1));
+    return;
+  }
+  if (args[0] === "scan") {
+    await runScanCommand(args.slice(1));
+    return;
+  }
+  if (args[0] === "prune") {
+    await runPruneCommand(args.slice(1));
+    return;
+  }
+  if (args[0] === "export") {
+    await runExportCommand(args.slice(1));
+    return;
+  }
+  if (args[0] === "status") {
+    await runStatusCommand(args.slice(1));
+    return;
+  }
+  if (args[0] === "open") {
+    await runOpenCommand(args.slice(1));
+    return;
+  }
+  if (args[0] === "stop") {
+    await runStopCommand(args.slice(1));
     return;
   }
 
