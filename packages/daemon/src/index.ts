@@ -1,4 +1,4 @@
-import { rm, writeFile } from "node:fs/promises";
+import { rm, stat, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
@@ -19,6 +19,7 @@ import { registerStreamRoutes } from "./api/stream.js";
 import { SseBus } from "./bus.js";
 import { loadConfig } from "./config.js";
 import { CcgmonDatabase } from "./db.js";
+import { OpenmcpTailer, resolveOpenmcpLogPath } from "./openmcp-tail.js";
 import { EventProjector } from "./projector.js";
 import { emitSyntheticEventForFile, ReconcileWorker } from "./reconcile.js";
 import { PlanWatcher, type WatchedFileChange } from "./watcher.js";
@@ -37,6 +38,7 @@ export type DaemonRuntime = {
   db: CcgmonDatabase;
   getSubscriberCount: () => number;
   port: number;
+  tailer: OpenmcpTailer | null;
   close: () => Promise<void>;
 };
 
@@ -59,6 +61,19 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
   });
   reconcileWorker.start();
   projector.startPolling();
+  const tailAbortController = new AbortController();
+  let tailer: OpenmcpTailer | null = null;
+  const logPath = resolveOpenmcpLogPath();
+  const openmcpLogExists = await stat(logPath)
+    .then((entry) => entry.isFile())
+    .catch(() => false);
+  if (openmcpLogExists) {
+    tailer = new OpenmcpTailer({
+      db,
+      projector,
+    });
+    await tailer.start(tailAbortController.signal);
+  }
   const startedAtMs = Date.now();
 
   const app = createApp({
@@ -78,6 +93,8 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
     server = listenResult.server;
     selectedPort = listenResult.port;
   } catch (error) {
+    tailAbortController.abort();
+    tailer?.stop();
     reconcileWorker.stop();
     await watcher.stop();
     projector.stopPolling();
@@ -99,6 +116,8 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
       return;
     }
     isClosing = true;
+    tailAbortController.abort();
+    tailer?.stop();
 
     await new Promise<void>((resolvePromise, rejectPromise) => {
       server!.close((error) => {
@@ -138,6 +157,7 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
     db,
     getSubscriberCount: () => bus.subscriberCount(),
     port: selectedPort,
+    tailer,
     close: async () => {
       if (signalHandler) {
         process.off("SIGINT", signalHandler);
