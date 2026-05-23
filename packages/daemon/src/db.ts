@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 
 import Database from "better-sqlite3";
@@ -52,7 +53,7 @@ type TaskRow = {
   files_json: string;
 };
 
-type ProjectRow = {
+export type ProjectRow = {
   project_id: string;
   repo_root: string;
   remote_url: string | null;
@@ -149,6 +150,96 @@ export class CcgmonDatabase {
         `,
       )
       .all() as ProjectRow[];
+  }
+
+  public listWatchableRepoRoots(): string[] {
+    const rows = this.db
+      .prepare(
+        `
+        SELECT repo_root
+        FROM projects
+        WHERE status = 'ACTIVE'
+        ORDER BY repo_root ASC;
+        `,
+      )
+      .all() as Array<{ repo_root: string }>;
+    return rows.map((row) => row.repo_root);
+  }
+
+  public getProjectByRepoRoot(repoRoot: string): ProjectRow | null {
+    const normalizedRepoRoot = normalizeRepoRoot(repoRoot);
+    const row = this.db
+      .prepare(
+        `
+        SELECT project_id, repo_root, remote_url, status, first_seen, last_seen
+        FROM projects
+        WHERE repo_root = ?;
+        `,
+      )
+      .get(normalizedRepoRoot) as ProjectRow | undefined;
+
+    return row ?? null;
+  }
+
+  public upsertProjectByRepoRoot(repoRoot: string, nowIso: string): {
+    created: boolean;
+    project: ProjectRow;
+  } {
+    const normalizedRepoRoot = normalizeRepoRoot(repoRoot);
+    const existing = this.getProjectByRepoRoot(normalizedRepoRoot);
+
+    if (existing) {
+      this.db
+        .prepare(
+          `
+          UPDATE projects
+          SET last_seen = ?
+          WHERE repo_root = ?;
+          `,
+        )
+        .run(nowIso, normalizedRepoRoot);
+      const updated = this.getProjectByRepoRoot(normalizedRepoRoot);
+      if (!updated) {
+        throw new Error(`project row disappeared for ${normalizedRepoRoot}`);
+      }
+      return {
+        created: false,
+        project: updated,
+      };
+    }
+
+    const projectId = projectIdFromRepoRoot(normalizedRepoRoot);
+    this.db
+      .prepare(
+        `
+        INSERT INTO projects (project_id, repo_root, status, first_seen, last_seen)
+        VALUES (?, ?, 'ACTIVE', ?, ?);
+        `,
+      )
+      .run(projectId, normalizedRepoRoot, nowIso, nowIso);
+
+    const created = this.getProjectByRepoRoot(normalizedRepoRoot);
+    if (!created) {
+      throw new Error(`failed to insert project for ${normalizedRepoRoot}`);
+    }
+
+    return {
+      created: true,
+      project: created,
+    };
+  }
+
+  public setProjectStatusByRepoRoot(repoRoot: string, status: string, nowIso: string): void {
+    const normalizedRepoRoot = normalizeRepoRoot(repoRoot);
+    this.db
+      .prepare(
+        `
+        UPDATE projects
+        SET status = ?, last_seen = ?
+        WHERE repo_root = ?;
+        `,
+      )
+      .run(status, nowIso, normalizedRepoRoot);
   }
 
   public getPlan(projectId: string, slug: string): {
@@ -262,4 +353,18 @@ function resolveSchemaPath(): string {
     return distPath;
   }
   return fileURLToPath(new URL("../src/schema.sql", import.meta.url));
+}
+
+export function normalizeRepoRoot(repoRoot: string): string {
+  const forward = repoRoot.replaceAll("\\", "/").replace(/\/+$/, "");
+  if (forward.length === 2 && /^[A-Za-z]:$/.test(forward)) {
+    return `${forward}/`;
+  }
+  return forward;
+}
+
+export function projectIdFromRepoRoot(repoRoot: string): string {
+  const normalized = normalizeRepoRoot(repoRoot);
+  const digest = createHash("sha256").update(normalized).digest("hex");
+  return `proj_${digest.slice(0, 16)}`;
 }
