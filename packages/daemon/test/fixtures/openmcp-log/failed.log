@@ -1,0 +1,3 @@
+run() backend=agy session_id=sess-failed-1 cd=F:/projects/demo prompt_bytes=180
+error_class=network detail=socket_timeout
+run() done backend=agy success=False attempts=3 session_id=sess-failed-1

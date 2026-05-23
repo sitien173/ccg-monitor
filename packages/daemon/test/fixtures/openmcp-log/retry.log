@@ -1,0 +1,3 @@
+run() backend=codex session_id=sess-retry-1 cd=F:/projects/demo prompt_bytes=240
+retry: preserving SESSION_ID=sess-retry-1
+run() done backend=codex success=True duration_ms=700 output_bytes=130 session_id=sess-retry-1

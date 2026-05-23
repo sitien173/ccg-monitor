@@ -1,0 +1,2 @@
+run() backend=codex session_id=<new> cd=F:/projects/demo prompt_bytes=120
+run() done backend=codex success=True duration_ms=450 output_bytes=88 session_id=sess-happy-1
