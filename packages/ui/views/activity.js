@@ -1,5 +1,12 @@
 import { html, useState } from 'https://esm.sh/htm/preact/standalone';
-import { WFTopbar, WFSparkline } from '../primitives.js';
+import { WFTopbar } from '../primitives.js';
+
+function WFSparkline({ data }) {
+  const max = Math.max(...data, 1);
+  return html`<div className="wf-sparkline" aria-label=${`Events per minute, last ${data.length} minutes`}>
+    ${data.map((v, i) => html`<i key=${i} style=${{ height: `${Math.max(2, (v / max) * 28)}px`, opacity: i > data.length - 5 ? 1 : 0.55 }} />`)}
+  </div>`;
+}
 
 export function WFActivitySplit({ events, machine, activeSessions, onSearchClick, onThemeToggle }) {
   const [selectedEvent, setSelectedEvent] = useState(null);
