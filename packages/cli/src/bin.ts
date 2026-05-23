@@ -2,6 +2,7 @@
 
 import { parseArgs } from "node:util";
 
+import { runInstallHooksCommand } from "./commands/install-hooks.js";
 import { runStartCommand } from "./commands/start.js";
 import { printVersion } from "./commands/version.js";
 
@@ -12,7 +13,8 @@ Options:
   --version, -v  Print ccg-monitor version
 
 Commands:
-  start          Run daemon in foreground`;
+  start          Run daemon in foreground
+  install-hooks  Install Claude Code hooks into ~/.claude/settings.json`;
 
 function printHelp(): void {
   process.stdout.write(`${HELP_TEXT}\n`);
@@ -22,6 +24,10 @@ async function main(): Promise<void> {
   const args = process.argv.slice(2);
   if (args[0] === "start") {
     await runStartCommand(args.slice(1));
+    return;
+  }
+  if (args[0] === "install-hooks") {
+    await runInstallHooksCommand(args.slice(1));
     return;
   }
 
