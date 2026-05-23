@@ -2,4 +2,10 @@ node_modules/
 dist/
 .DS_Store
 *.log
+*.stackdump
+nul
 docs/plans/*/.sessions.json
+.antigravitycli/
+.serena/
+**/*.test.d.ts
+**/*.test.js.map

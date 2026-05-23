@@ -1,0 +1,412 @@
+/*
+ * Linear Design System — Colors & Typography
+ * Source: linear.Design.md (extracted from linear.app marketing pages)
+ *
+ * Display/body: SF Pro Display + SF Pro Text (self-hosted woff2)
+ * Mono: JetBrains Mono (Google Fonts — substitute for Linear Mono)
+ */
+
+/* ============================================================
+   SELF-HOSTED FONT FACES
+   ============================================================ */
+@font-face {
+  font-family: 'SF Pro Display';
+  src: url('fonts/sf-pro-display_regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SF Pro Display';
+  src: url('fonts/sf-pro-display_medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SF Pro Display';
+  src: url('fonts/sf-pro-display_semibold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SF Pro Display';
+  src: url('fonts/sf-pro-display_bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'SF Pro Text';
+  src: url('fonts/sf-pro-text_regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SF Pro Text';
+  src: url('fonts/sf-pro-text_semibold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Mono — still Google Fonts (JetBrains Mono substitute for Linear Mono) */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* ============================================================
+   BASE COLOR TOKENS
+   ============================================================ */
+:root {
+  /* Brand & Accent */
+  --color-primary:          #5e6ad2;
+  --color-primary-hover:    #828fff;
+  --color-primary-focus:    #5e69d1;
+  --color-brand-secure:     #7a7fad;
+  --color-on-primary:       #ffffff;
+
+  /* Surface Ladder */
+  --color-canvas:           #010102;
+  --color-surface-1:        #16181d;
+  --color-surface-2:        #1e2028;
+  --color-surface-3:        #26282f;
+  --color-surface-4:        #2e3038;
+
+  /* Borders */
+  --color-hairline:         #23252a;
+  --color-hairline-strong:  #35373e;
+  --color-hairline-tertiary:#2a2c33;
+
+  /* Text / Ink */
+  --color-ink:              #f7f8f8;
+  --color-ink-muted:        #d0d6e0;
+  --color-ink-subtle:       #8a8f98;
+  --color-ink-tertiary:     #62666d;
+
+  /* Inverse (light) */
+  --color-inverse-canvas:     #ffffff;
+  --color-inverse-surface-1:  #f5f5f5;
+  --color-inverse-surface-2:  #ebebeb;
+  --color-inverse-ink:        #010102;
+
+  /* Semantic */
+  --color-semantic-success: #27a644;
+  --color-semantic-overlay: #000000;
+
+  /* In-product label colors (for product UI mockups) */
+  --color-label-red:        #eb5757;
+  --color-label-orange:     #f2994a;
+  --color-label-yellow:     #f2c94c;
+  --color-label-green:      #27ae60;
+  --color-label-blue:       #2f80ed;
+  --color-label-purple:     #9b51e0;
+
+  /* ============================================================
+     SPACING TOKENS
+     ============================================================ */
+  --space-xxs:    4px;
+  --space-xs:     8px;
+  --space-sm:     12px;
+  --space-md:     16px;
+  --space-lg:     24px;
+  --space-xl:     32px;
+  --space-xxl:    48px;
+  --space-section:96px;
+
+  /* ============================================================
+     BORDER RADIUS TOKENS
+     ============================================================ */
+  --rounded-xs:   4px;
+  --rounded-sm:   6px;
+  --rounded-md:   8px;
+  --rounded-lg:   12px;
+  --rounded-xl:   16px;
+  --rounded-xxl:  24px;
+  --rounded-pill: 9999px;
+  --rounded-full: 9999px;
+
+  /* ============================================================
+     FONT FAMILY TOKENS
+     ============================================================ */
+  --font-display: 'SF Pro Display', -apple-system, system-ui, 'Segoe UI', Roboto, sans-serif;
+  --font-text:    'SF Pro Text', 'SF Pro Display', -apple-system, system-ui, 'Segoe UI', Roboto, sans-serif;
+  --font-mono:    'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* ============================================================
+     TYPOGRAPHY TOKENS
+     ============================================================ */
+
+  /* Display XL — Largest hero headline */
+  --text-display-xl-size:     80px;
+  --text-display-xl-weight:   600;
+  --text-display-xl-lh:       1.05;
+  --text-display-xl-ls:       -3.0px;
+
+  /* Display LG — Section opener headlines */
+  --text-display-lg-size:     56px;
+  --text-display-lg-weight:   600;
+  --text-display-lg-lh:       1.10;
+  --text-display-lg-ls:       -1.8px;
+
+  /* Display MD — Sub-section headlines */
+  --text-display-md-size:     40px;
+  --text-display-md-weight:   600;
+  --text-display-md-lh:       1.15;
+  --text-display-md-ls:       -1.0px;
+
+  /* Headline — Pricing tier titles, CTA banner heading */
+  --text-headline-size:       28px;
+  --text-headline-weight:     600;
+  --text-headline-lh:         1.20;
+  --text-headline-ls:         -0.6px;
+
+  /* Card Title */
+  --text-card-title-size:     22px;
+  --text-card-title-weight:   500;
+  --text-card-title-lh:       1.25;
+  --text-card-title-ls:       -0.4px;
+
+  /* Subhead — Lead body, intro paragraphs */
+  --text-subhead-size:        20px;
+  --text-subhead-weight:      400;
+  --text-subhead-lh:          1.40;
+  --text-subhead-ls:          -0.2px;
+
+  /* Body LG */
+  --text-body-lg-size:        18px;
+  --text-body-lg-weight:      400;
+  --text-body-lg-lh:          1.50;
+  --text-body-lg-ls:          -0.1px;
+
+  /* Body */
+  --text-body-size:           16px;
+  --text-body-weight:         400;
+  --text-body-lh:             1.50;
+  --text-body-ls:             -0.05px;
+
+  /* Body SM */
+  --text-body-sm-size:        14px;
+  --text-body-sm-weight:      400;
+  --text-body-sm-lh:          1.50;
+  --text-body-sm-ls:          0px;
+
+  /* Caption */
+  --text-caption-size:        12px;
+  --text-caption-weight:      400;
+  --text-caption-lh:          1.40;
+  --text-caption-ls:          0px;
+
+  /* Button */
+  --text-button-size:         14px;
+  --text-button-weight:       500;
+  --text-button-lh:           1.20;
+  --text-button-ls:           0px;
+
+  /* Eyebrow */
+  --text-eyebrow-size:        13px;
+  --text-eyebrow-weight:      500;
+  --text-eyebrow-lh:          1.30;
+  --text-eyebrow-ls:          0.4px;
+
+  /* Mono */
+  --text-mono-size:           13px;
+  --text-mono-weight:         400;
+  --text-mono-lh:             1.50;
+  --text-mono-ls:             0px;
+}
+
+/* ============================================================
+   SEMANTIC / UTILITY CLASSES
+   ============================================================ */
+
+.display-xl {
+  font-family: var(--font-display);
+  font-size: var(--text-display-xl-size);
+  font-weight: var(--text-display-xl-weight);
+  line-height: var(--text-display-xl-lh);
+  letter-spacing: var(--text-display-xl-ls);
+  color: var(--color-ink);
+}
+
+.display-lg {
+  font-family: var(--font-display);
+  font-size: var(--text-display-lg-size);
+  font-weight: var(--text-display-lg-weight);
+  line-height: var(--text-display-lg-lh);
+  letter-spacing: var(--text-display-lg-ls);
+  color: var(--color-ink);
+}
+
+.display-md {
+  font-family: var(--font-display);
+  font-size: var(--text-display-md-size);
+  font-weight: var(--text-display-md-weight);
+  line-height: var(--text-display-md-lh);
+  letter-spacing: var(--text-display-md-ls);
+  color: var(--color-ink);
+}
+
+.headline {
+  font-family: var(--font-display);
+  font-size: var(--text-headline-size);
+  font-weight: var(--text-headline-weight);
+  line-height: var(--text-headline-lh);
+  letter-spacing: var(--text-headline-ls);
+  color: var(--color-ink);
+}
+
+.card-title {
+  font-family: var(--font-display);
+  font-size: var(--text-card-title-size);
+  font-weight: var(--text-card-title-weight);
+  line-height: var(--text-card-title-lh);
+  letter-spacing: var(--text-card-title-ls);
+  color: var(--color-ink);
+}
+
+.subhead {
+  font-family: var(--font-text);
+  font-size: var(--text-subhead-size);
+  font-weight: var(--text-subhead-weight);
+  line-height: var(--text-subhead-lh);
+  letter-spacing: var(--text-subhead-ls);
+  color: var(--color-ink-muted);
+}
+
+.body-lg {
+  font-family: var(--font-text);
+  font-size: var(--text-body-lg-size);
+  font-weight: var(--text-body-lg-weight);
+  line-height: var(--text-body-lg-lh);
+  letter-spacing: var(--text-body-lg-ls);
+  color: var(--color-ink-muted);
+}
+
+.body {
+  font-family: var(--font-text);
+  font-size: var(--text-body-size);
+  font-weight: var(--text-body-weight);
+  line-height: var(--text-body-lh);
+  letter-spacing: var(--text-body-ls);
+  color: var(--color-ink-muted);
+}
+
+.body-sm {
+  font-family: var(--font-text);
+  font-size: var(--text-body-sm-size);
+  font-weight: var(--text-body-sm-weight);
+  line-height: var(--text-body-sm-lh);
+  letter-spacing: var(--text-body-sm-ls);
+  color: var(--color-ink-subtle);
+}
+
+.caption {
+  font-family: var(--font-text);
+  font-size: var(--text-caption-size);
+  font-weight: var(--text-caption-weight);
+  line-height: var(--text-caption-lh);
+  letter-spacing: var(--text-caption-ls);
+  color: var(--color-ink-subtle);
+}
+
+.eyebrow {
+  font-family: var(--font-text);
+  font-size: var(--text-eyebrow-size);
+  font-weight: var(--text-eyebrow-weight);
+  line-height: var(--text-eyebrow-lh);
+  letter-spacing: var(--text-eyebrow-ls);
+  color: var(--color-ink-subtle);
+  text-transform: uppercase;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-mono-size);
+  font-weight: var(--text-mono-weight);
+  line-height: var(--text-mono-lh);
+  letter-spacing: var(--text-mono-ls);
+  color: var(--color-ink-muted);
+}
+
+/* ============================================================
+   ELEMENT DEFAULTS
+   ============================================================ */
+
+h1 { 
+  font-family: var(--font-display);
+  font-size: var(--text-display-lg-size);
+  font-weight: var(--text-display-lg-weight);
+  line-height: var(--text-display-lg-lh);
+  letter-spacing: var(--text-display-lg-ls);
+  color: var(--color-ink);
+  margin: 0 0 var(--space-lg) 0;
+}
+
+h2 {
+  font-family: var(--font-display);
+  font-size: var(--text-display-md-size);
+  font-weight: var(--text-display-md-weight);
+  line-height: var(--text-display-md-lh);
+  letter-spacing: var(--text-display-md-ls);
+  color: var(--color-ink);
+  margin: 0 0 var(--space-md) 0;
+}
+
+h3 {
+  font-family: var(--font-display);
+  font-size: var(--text-headline-size);
+  font-weight: var(--text-headline-weight);
+  line-height: var(--text-headline-lh);
+  letter-spacing: var(--text-headline-ls);
+  color: var(--color-ink);
+  margin: 0 0 var(--space-md) 0;
+}
+
+h4 {
+  font-family: var(--font-display);
+  font-size: var(--text-card-title-size);
+  font-weight: var(--text-card-title-weight);
+  line-height: var(--text-card-title-lh);
+  letter-spacing: var(--text-card-title-ls);
+  color: var(--color-ink);
+  margin: 0 0 var(--space-sm) 0;
+}
+
+p {
+  font-family: var(--font-text);
+  font-size: var(--text-body-size);
+  font-weight: var(--text-body-weight);
+  line-height: var(--text-body-lh);
+  letter-spacing: var(--text-body-ls);
+  color: var(--color-ink-muted);
+  margin: 0 0 var(--space-md) 0;
+}
+
+code, pre {
+  font-family: var(--font-mono);
+  font-size: var(--text-mono-size);
+  font-weight: var(--text-mono-weight);
+  line-height: var(--text-mono-lh);
+  letter-spacing: var(--text-mono-ls);
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+a:hover {
+  color: var(--color-primary-hover);
+}
+
+body {
+  background-color: var(--color-canvas);
+  color: var(--color-ink-muted);
+  font-family: var(--font-text);
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-lh);
+  letter-spacing: var(--text-body-ls);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
