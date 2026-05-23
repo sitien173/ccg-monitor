@@ -91,6 +91,17 @@ CREATE TABLE IF NOT EXISTS sessions_cache (
   PRIMARY KEY (project_id, slug, backend)
 );
 
+CREATE TABLE IF NOT EXISTS openmcp_tail_state (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  log_path TEXT NOT NULL,
+  byte_offset INTEGER NOT NULL,
+  inode TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_events_project_ts ON events(project_id, ts DESC);
 CREATE INDEX IF NOT EXISTS idx_events_session ON events(session_id);
 CREATE INDEX IF NOT EXISTS idx_plans_status_updated ON plans(status, updated_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_events_tail_offset
+  ON events(source, json_extract(payload_json, '$.log_offset'))
+  WHERE source = 'openmcp_tail';

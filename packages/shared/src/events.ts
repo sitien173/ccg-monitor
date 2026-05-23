@@ -9,7 +9,13 @@ const UuidV7StringSchema = z
 
 const IsoDateTimeStringSchema = z.string().datetime({ offset: true });
 
-const SourceSchema = z.enum(["openmcp", "claude_hook", "fs_watcher", "backfill"]);
+const SourceSchema = z.enum([
+  "openmcp",
+  "openmcp_tail",
+  "claude_hook",
+  "fs_watcher",
+  "backfill",
+]);
 const BackendSchema = z.enum(["codex", "agy"]);
 const GateSchema = z.enum(["plan", "execute", "review"]);
 const GateResultSchema = z.enum(["PASS", "PASS_WITH_DEBT", "FAIL", "BLOCKED"]);

@@ -6,7 +6,7 @@ import Database from "better-sqlite3";
 
 import type { Event } from "@ccgmon/shared/types";
 
-const CURRENT_SCHEMA_VERSION = 1;
+const CURRENT_SCHEMA_VERSION = 2;
 
 type EventRow = {
   event_id: string;
@@ -64,6 +64,13 @@ export type ProjectRow = {
   status: string;
   first_seen: string;
   last_seen: string;
+};
+
+export type OpenmcpTailStateRow = {
+  log_path: string;
+  byte_offset: number;
+  inode: string;
+  updated_at: string;
 };
 
 type InsertResult = {
@@ -311,6 +318,36 @@ export class CcgmonDatabase {
       eventCount: row.count,
       dbSizeBytes: sizeRow.size_bytes,
     };
+  }
+
+  public getTailState(): OpenmcpTailStateRow | null {
+    const row = this.db
+      .prepare(
+        `
+        SELECT log_path, byte_offset, inode, updated_at
+        FROM openmcp_tail_state
+        WHERE id = 1;
+        `,
+      )
+      .get() as OpenmcpTailStateRow | undefined;
+
+    return row ?? null;
+  }
+
+  public setTailState(logPath: string, byteOffset: number, inode: string): void {
+    this.db
+      .prepare(
+        `
+        INSERT INTO openmcp_tail_state (id, log_path, byte_offset, inode, updated_at)
+        VALUES (1, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+          log_path = excluded.log_path,
+          byte_offset = excluded.byte_offset,
+          inode = excluded.inode,
+          updated_at = excluded.updated_at;
+        `,
+      )
+      .run(logPath, byteOffset, inode, new Date().toISOString());
   }
 
   public countEvents(): number {
