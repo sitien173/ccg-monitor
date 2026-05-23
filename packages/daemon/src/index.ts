@@ -19,6 +19,8 @@ import { SseBus } from "./bus.js";
 import { loadConfig } from "./config.js";
 import { CcgmonDatabase } from "./db.js";
 import { EventProjector } from "./projector.js";
+import { emitSyntheticEventForFile, ReconcileWorker } from "./reconcile.js";
+import { PlanWatcher, type WatchedFileChange } from "./watcher.js";
 
 const DAEMON_VERSION = "0.1.0";
 const DAEMON_HOST = "127.0.0.1";
@@ -42,6 +44,19 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
   const db = new CcgmonDatabase(config.dbPath);
   const bus = new SseBus();
   const projector = new EventProjector(db);
+  const watcher = new PlanWatcher({
+    db,
+    onFileChange: (change) => {
+      void handleWatchedFileChange(change, db, projector);
+    },
+  });
+  await watcher.start();
+  const reconcileWorker = new ReconcileWorker({
+    db,
+    projector,
+    watcher,
+  });
+  reconcileWorker.start();
   projector.startPolling();
   const startedAtMs = Date.now();
 
@@ -49,6 +64,7 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
     bus,
     db,
     projector,
+    watcher,
     startedAtMs,
   });
 
@@ -61,6 +77,8 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
     server = listenResult.server;
     selectedPort = listenResult.port;
   } catch (error) {
+    reconcileWorker.stop();
+    await watcher.stop();
     projector.stopPolling();
     db.close();
     throw error;
@@ -91,6 +109,9 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
       });
     });
 
+    reconcileWorker.stop();
+    await watcher.stop();
+    projector.stopPolling();
     db.close();
     await removePortFile();
   };
@@ -130,6 +151,7 @@ export function createApp(dependencies: {
   bus: SseBus;
   db: CcgmonDatabase;
   projector: EventProjector;
+  watcher?: PlanWatcher;
   startedAtMs: number;
 }): Hono {
   const app = new Hono();
@@ -138,6 +160,7 @@ export function createApp(dependencies: {
     bus: dependencies.bus,
     db: dependencies.db,
     projector: dependencies.projector,
+    watcher: dependencies.watcher,
   });
   registerStreamRoutes(app, {
     bus: dependencies.bus,
@@ -164,6 +187,30 @@ export function createApp(dependencies: {
   );
 
   return app;
+}
+
+async function handleWatchedFileChange(
+  change: WatchedFileChange,
+  db: CcgmonDatabase,
+  projector: EventProjector,
+): Promise<void> {
+  if (change.event === "unlink" || change.event === "unlinkDir") {
+    return;
+  }
+
+  const project = db.getProjectByRepoRoot(change.repoRoot);
+  if (!project || project.status !== "ACTIVE") {
+    return;
+  }
+
+  await emitSyntheticEventForFile({
+    db,
+    projector,
+    projectId: project.project_id,
+    repoRoot: change.repoRoot,
+    filePath: change.filePath,
+    source: "fs_watcher",
+  });
 }
 
 async function listenWithPortStrategy(

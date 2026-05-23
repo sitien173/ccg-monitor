@@ -739,6 +739,34 @@ export class CcgmonDatabase {
     return tx();
   }
 
+  public listPlanSlugsByProject(projectId: string): string[] {
+    const rows = this.db
+      .prepare(
+        `
+        SELECT slug
+        FROM plans
+        WHERE project_id = ?
+        ORDER BY slug ASC;
+        `,
+      )
+      .all(projectId) as Array<{ slug: string }>;
+    return rows.map((row) => row.slug);
+  }
+
+  public listPhaseIdsByPlan(projectId: string, slug: string): string[] {
+    const rows = this.db
+      .prepare(
+        `
+        SELECT phase_id
+        FROM phases
+        WHERE project_id = ? AND slug = ?
+        ORDER BY phase_id ASC;
+        `,
+      )
+      .all(projectId, slug) as Array<{ phase_id: string }>;
+    return rows.map((row) => row.phase_id);
+  }
+
   private runMigrations(): void {
     const versionRow = this.db
       .prepare("PRAGMA user_version;")
